@@ -60,7 +60,6 @@ if not st.session_state.logged_in:
                 st.success("Login successful!")
                 st.session_state.logged_in = True
                 st.session_state.email = email
-                st.experimental_rerun()
             else:
                 st.error("Invalid credentials")
 
@@ -106,7 +105,6 @@ if st.session_state.logged_in:
     if st.button("Logout"):
         st.session_state.logged_in = False
         st.session_state.email = None
-        st.experimental_rerun()
 
     st.markdown("<h1 style='text-align: center;'>📧 Email Checker</h1>", unsafe_allow_html=True)
 

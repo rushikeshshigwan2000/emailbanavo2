@@ -7,14 +7,12 @@ import random
 from email.mime.text import MIMEText
 from auth_utils import create_user_table, add_user, validate_user, user_exists, update_password
 
-# Create DB table
+# Run this once to ensure user table is created
 create_user_table()
 
-# Session state defaults
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
-if 'email' not in st.session_state:
-    st.session_state.email = ""
+st.markdown("<h1 style='text-align: center;'>🔐 Data Gateway Email Checker</h1>", unsafe_allow_html=True)
+
+# Initialize session state
 if 'otp_stage' not in st.session_state:
     st.session_state.otp_stage = None
 if 'generated_otp' not in st.session_state:
@@ -23,8 +21,11 @@ if 'pending_email' not in st.session_state:
     st.session_state.pending_email = None
 if 'pending_password' not in st.session_state:
     st.session_state.pending_password = None
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+if 'email' not in st.session_state:
+    st.session_state.email = None
 
-# Send OTP via Gmail SMTP
 def send_otp_email(to_email, otp):
     from_email = "rushikeshshigwan2000@gmail.com"
     msg = MIMEText(f"Your OTP verification code is: {otp}")
@@ -35,16 +36,16 @@ def send_otp_email(to_email, otp):
     try:
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.starttls()
-            server.login(from_email, "ojkp ausq pyib wavn")  # Your Gmail App Password
+            server.login(from_email, "ojkp ausq pyib wavn")  # Use your app password here
             server.sendmail(from_email, to_email, msg.as_string())
         return True
     except Exception as e:
         st.error(f"Failed to send email: {e}")
         return False
 
-# =================== AUTH UI ===================
+# ================= AUTH UI =================
 if not st.session_state.logged_in:
-    st.markdown("<h1 style='text-align: center;'>🔐 Login to Use Email Checker</h1>", unsafe_allow_html=True)
+
     auth_mode = st.sidebar.selectbox("Select Auth Mode", ["Login", "Sign Up", "Reset Password"])
 
     email = st.text_input("Email")
@@ -59,6 +60,7 @@ if not st.session_state.logged_in:
                 st.success("Login successful!")
                 st.session_state.logged_in = True
                 st.session_state.email = email
+                st.experimental_rerun()
             else:
                 st.error("Invalid credentials")
 
@@ -72,6 +74,7 @@ if not st.session_state.logged_in:
                     st.session_state.otp_stage = None
                 else:
                     st.error("Invalid OTP")
+
         else:
             if st.button("Send OTP"):
                 if not user_exists(email):
@@ -98,15 +101,14 @@ if not st.session_state.logged_in:
                 st.error("User not found.")
 
 # ================= EMAIL CHECKER UI =================
-
 if st.session_state.logged_in:
-    st.markdown("<h1 style='text-align: center;'>📧 Email Checker</h1>", unsafe_allow_html=True)
-    st.success(f"Logged in as {st.session_state.email}")
-    
+    st.success(f"Logged in as: {st.session_state.email}")
     if st.button("Logout"):
         st.session_state.logged_in = False
-        st.session_state.email = ""
+        st.session_state.email = None
         st.experimental_rerun()
+
+    st.markdown("<h1 style='text-align: center;'>📧 Email Checker</h1>", unsafe_allow_html=True)
 
     def extract_domain(email):
         try:
@@ -125,12 +127,14 @@ if st.session_state.logged_in:
         try:
             mx_records = dns.resolver.resolve(domain, 'MX')
             mx_record = str(mx_records[0].exchange)
+
             server = smtplib.SMTP(timeout=10)
             server.connect(mx_record)
             server.helo()
             server.mail('noreply@datagateway.in')
-            code, _ = server.rcpt(email)
+            code, message = server.rcpt(email)
             server.quit()
+
             return code == 250
         except Exception:
             return False
@@ -163,6 +167,8 @@ if st.session_state.logged_in:
         else:
             st.error("Please enter an email to validate.")
 
+    st.write("Upload your Excel file here")
+
     uploaded_file = st.file_uploader("Upload CSV or Excel", type=["csv", "xlsx"])
     if uploaded_file is not None:
         file_extension = uploaded_file.name.split(".")[-1]
@@ -171,7 +177,7 @@ if st.session_state.logged_in:
         elif file_extension == "xlsx":
             df = pd.read_excel(uploaded_file)
         else:
-            st.error("Unsupported file format.")
+            st.error("Unsupported file format. Please upload a CSV or Excel file.")
             st.stop()
 
         if 'Email' in df.columns:

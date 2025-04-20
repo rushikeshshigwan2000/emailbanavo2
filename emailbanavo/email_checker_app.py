@@ -45,7 +45,7 @@ email = st.text_input("Email")
 password = st.text_input("Password", type="password")
 
 # Check for organization domain
-if email and not email.endswith("@datagateway.in"):
+if email and not email.endswith("@gmail.com"):
     st.warning("Only organization emails ending with @datagateway.in are allowed.")
 
 if auth_mode == "Login":
@@ -71,7 +71,7 @@ elif auth_mode == "Sign Up":
     else:
         if st.button("Send OTP"):
             if not user_exists(email):
-                if email.endswith("@datagateway.in"):
+                if email.endswith("@gmail.com"):
                     otp = str(random.randint(100000, 999999))
                     if send_otp_email(email, otp):
                         st.success("OTP sent to your email.")

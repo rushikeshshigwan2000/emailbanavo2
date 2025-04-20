@@ -90,7 +90,7 @@ auth_option = st.sidebar.radio("Choose Option", ["Login", "Sign Up"])
 users = load_users()
 
 if auth_option == "Sign Up":
-    email = st.sidebar.text_input("Organization Email (e.g. name@datagateway.in)")
+    email = st.sidebar.text_input("Organization Email (only @datagateway.in)")
     password = st.sidebar.text_input("Password", type="password")
     if st.sidebar.button("Get Code"):
         if not email.endswith(f"@{ORG_DOMAIN}"):

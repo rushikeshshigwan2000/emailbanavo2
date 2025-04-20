@@ -16,7 +16,7 @@ email = st.text_input("Email")
 password = st.text_input("Password", type="password")
 
 # Check for organization domain
-if email and not email.endswith("@datagateway.in"):
+if email and not email.endswith("@datagateway.in", "@gmail.com"):
     st.warning("Only organization emails ending with @datagateway.in are allowed.")
 
 if auth_mode == "Login":

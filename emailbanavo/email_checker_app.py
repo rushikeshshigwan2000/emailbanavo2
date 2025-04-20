@@ -3,6 +3,8 @@ import pandas as pd
 import smtplib
 import dns.resolver
 import tempfile
+import random
+from email.mime.text import MIMEText
 from auth_utils import create_user_table, add_user, validate_user, user_exists, update_password
 
 # Run this once to ensure table is created
@@ -10,13 +12,40 @@ create_user_table()
 
 st.markdown("<h1 style='text-align: center;'>🔐 Login to Use Email Checker</h1>", unsafe_allow_html=True)
 
+# OTP session management
+if 'otp_stage' not in st.session_state:
+    st.session_state.otp_stage = None
+if 'generated_otp' not in st.session_state:
+    st.session_state.generated_otp = None
+if 'pending_email' not in st.session_state:
+    st.session_state.pending_email = None
+if 'pending_password' not in st.session_state:
+    st.session_state.pending_password = None
+
+def send_otp_email(to_email, otp):
+    from_email = "noreply@datagateway.in"
+    msg = MIMEText(f"Your OTP verification code is: {otp}")
+    msg['Subject'] = "Email Verification - Data Gateway"
+    msg['From'] = from_email
+    msg['To'] = to_email
+
+    try:
+        with smtplib.SMTP('smtp.yourmailserver.com', 587) as server:
+            server.starttls()
+            server.login(from_email, "YOUR_APP_PASSWORD")  # Replace with your real credentials
+            server.sendmail(from_email, to_email, msg.as_string())
+        return True
+    except Exception as e:
+        st.error(f"Failed to send email: {e}")
+        return False
+
 auth_mode = st.sidebar.selectbox("Select Auth Mode", ["Login", "Sign Up", "Reset Password"])
 
 email = st.text_input("Email")
 password = st.text_input("Password", type="password")
 
 # Check for organization domain
-if email and not email.endswith("@gmail.com"):
+if email and not email.endswith("@datagateway.in"):
     st.warning("Only organization emails ending with @datagateway.in are allowed.")
 
 if auth_mode == "Login":
@@ -29,15 +58,31 @@ if auth_mode == "Login":
             st.error("Invalid credentials")
 
 elif auth_mode == "Sign Up":
-    if st.button("Sign Up"):
-        if not user_exists(email):
-            if email.endswith("@gmail.com"):
-                add_user(email, password)
-                st.success("Account created. Please log in.")
+    if st.session_state.otp_stage == "verify":
+        input_otp = st.text_input("Enter OTP sent to your email")
+        if st.button("Verify OTP"):
+            if input_otp == st.session_state.generated_otp:
+                add_user(st.session_state.pending_email, st.session_state.pending_password)
+                st.success("Account created! You can now log in.")
+                st.session_state.otp_stage = None
             else:
-                st.error("Only organization emails allowed.")
-        else:
-            st.error("User already exists")
+                st.error("Invalid OTP")
+
+    else:
+        if st.button("Send OTP"):
+            if not user_exists(email):
+                if email.endswith("@datagateway.in"):
+                    otp = str(random.randint(100000, 999999))
+                    if send_otp_email(email, otp):
+                        st.success("OTP sent to your email.")
+                        st.session_state.generated_otp = otp
+                        st.session_state.pending_email = email
+                        st.session_state.pending_password = password
+                        st.session_state.otp_stage = "verify"
+                else:
+                    st.error("Only organization emails allowed.")
+            else:
+                st.error("User already exists")
 
 elif auth_mode == "Reset Password":
     new_pass = st.text_input("New Password", type="password")
@@ -55,14 +100,12 @@ if st.session_state.get("logged_in"):
     st.markdown("<h1 style='text-align: center;'>📧 Email Checker</h1>", unsafe_allow_html=True)
 
     def extract_domain(email):
-        """Extracts domain from an email."""
         try:
             return email.split("@")[1]
         except IndexError:
             return None
 
     def is_domain_valid(domain):
-        """Checks if the domain has MX records."""
         try:
             mx_records = dns.resolver.resolve(domain, 'MX')
             return True if mx_records else False
@@ -70,12 +113,10 @@ if st.session_state.get("logged_in"):
             return False
 
     def is_email_valid(email, domain):
-        """Validates email using SMTP by checking the recipient."""
         try:
             mx_records = dns.resolver.resolve(domain, 'MX')
             mx_record = str(mx_records[0].exchange)
 
-            # Connect to SMTP server
             server = smtplib.SMTP(timeout=10)
             server.connect(mx_record)
             server.helo()
@@ -83,12 +124,11 @@ if st.session_state.get("logged_in"):
             code, message = server.rcpt(email)
             server.quit()
 
-            return code == 250  # 250 means the email exists
+            return code == 250
         except Exception:
             return False
 
     def validate_emails(df):
-        """Validates emails in a DataFrame and returns results."""
         results = []
         for email in df['Email']:
             domain = extract_domain(email)
@@ -100,7 +140,6 @@ if st.session_state.get("logged_in"):
                 results.append([email, None, False, False])
         return pd.DataFrame(results, columns=['Email', 'Domain', 'Domain Valid', 'Email Valid'])
 
-    # Single Email Validation Input
     single_email = st.text_input("Enter a single email to validate")
     if st.button("Validate Email"):
         if single_email:
@@ -139,16 +178,13 @@ if st.session_state.get("logged_in"):
                 st.write("### Validation Results")
                 st.dataframe(result_df)
 
-                # Save results to CSV
                 temp_csv = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
                 result_df.to_csv(temp_csv.name, index=False)
 
-                # Save results to Excel
                 temp_xlsx = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
                 with pd.ExcelWriter(temp_xlsx.name, engine='xlsxwriter') as writer:
                     result_df.to_excel(writer, index=False)
 
-                # Provide download links
                 with open(temp_csv.name, "rb") as file:
                     st.download_button("Download Results as CSV", file, "validated_emails.csv", "text/csv")
                 with open(temp_xlsx.name, "rb") as file:

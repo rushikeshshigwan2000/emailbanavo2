@@ -30,7 +30,7 @@ def send_otp_email(to_email, otp):
     msg['To'] = to_email
 
     try:
-        with smtplib.SMTP('smtp.rushikeshshigwan2000@gmail.com', 587) as server:
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.starttls()
             server.login(from_email, "ojkp ausq pyib wavn")  # Replace with your real credentials
             server.sendmail(from_email, to_email, msg.as_string())

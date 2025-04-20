@@ -23,16 +23,16 @@ if 'pending_password' not in st.session_state:
     st.session_state.pending_password = None
 
 def send_otp_email(to_email, otp):
-    from_email = "noreply@datagateway.in"
+    from_email = "rushikeshshigwan2000@gmail.com"
     msg = MIMEText(f"Your OTP verification code is: {otp}")
     msg['Subject'] = "Email Verification - Data Gateway"
     msg['From'] = from_email
     msg['To'] = to_email
 
     try:
-        with smtplib.SMTP('smtp.yourmailserver.com', 587) as server:
+        with smtplib.SMTP('smtp.rushikeshshigwan2000@gmail.com', 587) as server:
             server.starttls()
-            server.login(from_email, "YOUR_APP_PASSWORD")  # Replace with your real credentials
+            server.login(from_email, "ojkp ausq pyib wavn")  # Replace with your real credentials
             server.sendmail(from_email, to_email, msg.as_string())
         return True
     except Exception as e:

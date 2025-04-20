@@ -16,7 +16,7 @@ email = st.text_input("Email")
 password = st.text_input("Password", type="password")
 
 # Check for organization domain
-if email and not email.endswith("@datagateway.in", "@gmail.com"):
+if email and not email.endswith("@gmail.com"):
     st.warning("Only organization emails ending with @datagateway.in are allowed.")
 
 if auth_mode == "Login":
@@ -31,7 +31,7 @@ if auth_mode == "Login":
 elif auth_mode == "Sign Up":
     if st.button("Sign Up"):
         if not user_exists(email):
-            if email.endswith("@datagateway.in"):
+            if email.endswith("@gmail.com"):
                 add_user(email, password)
                 st.success("Account created. Please log in.")
             else:
